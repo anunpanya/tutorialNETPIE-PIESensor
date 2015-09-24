@@ -1,0 +1,125 @@
+<script src="microgear.js"></script>
+<script src="js/raphael.2.1.0.min.js"></script>
+<script src="js/justgage.1.0.1.min.js"></script>
+
+<style>
+	body {
+		text-align: center;
+	}
+
+	#temp, #humid, #light {
+		width:200px; height:160px;
+		display: inline-block;
+	}
+
+	#name {
+		font-size: 20px;
+		color: blue;
+	}
+
+	#esp8266 {
+		display: none;
+		border: 1px solid black;
+		border-radius: 10px;
+		padding: 5px;
+		margin: 10px;
+		background: aliceblue;
+	}
+	
+	#nectec {
+		
+		padding: 10px;
+		width:127px; 
+		height:30px;
+	}
+
+</style>
+
+<script>
+	var temp,humid,light;
+
+	window.onload = function(){
+		temp = new JustGage({
+			id: "temp", 
+			value: 0, 
+			min: 0,
+			max: 100,
+			title: "TEMPERATURE",
+			label: "Degree Celsius",
+			showMinMax: false 
+		});
+
+		humid = new JustGage({
+			id: "humid", 
+			value: 0, 
+			min: 0,
+			max: 100,
+			title: "HUMIDITY",
+			label: "%"
+		});
+
+		light = new JustGage({
+			id: "light", 
+			value: 0, 
+			min: 0,
+			max: 10,
+			title: "LIGHT LEVEL",
+			label: "",
+			levelColors: ["#00fff6","#ff00fc","#1200ff"]
+		});
+
+	};
+
+</script>
+
+<script>
+	const APPKEY = "APPKEY";
+	const APPSECRET = "APPSECRET";
+	const APPID = "APPID";
+
+	var microgear = Microgear.create({
+		gearkey: APPKEY,
+		gearsecret: APPSECRET
+	});
+
+	var x=0,timestamp=0;
+
+	microgear.on('message',function(topic,msg) {
+		var split_msg = msg.split(",");
+		var timestamp_current = new Date().getTime();
+		//console.log(msg);
+
+		if(typeof(split_msg[3])=='undefined' || split_msg[3] == 'esp8266'){
+				document.getElementById("esp8266").style.display = "block";
+				document.getElementById("name").innerHTML = split_msg[3].toUpperCase();
+				temp.refresh(split_msg[0]);
+				humid.refresh(split_msg[1]);
+				light.refresh(split_msg[2]);
+				timestamp = timestamp_current;
+		}
+	});
+
+	microgear.on('connected', function() {
+		microgear.setname('webapp');
+		document.getElementById("data").innerHTML = '<p><img src="img/nectec_logo.png" id="nectec" onclick="location.reload()"></p>';
+	});
+
+	setInterval(function(){
+		var timestamp_current = new Date().getTime();
+
+		if((timestamp_current-timestamp2)>10000){
+			document.getElementById("esp8266").style.display = "none";
+		}
+	},1000);
+
+	microgear.resettoken();
+	microgear.connect(APPID);
+</script>
+
+<div id="data"></div>
+<div id="esp8266">
+	<div id="name"></div>
+	<div id="temp"></div>
+	<div id="humid"></div>
+	<div id="light"></div>
+</div>
