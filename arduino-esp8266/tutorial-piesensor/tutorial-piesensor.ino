@@ -29,10 +29,16 @@ int LDR = A0;
 int timer = 0;
 MicroGear microgear(client);
 
+void onConnected(char *attribute, uint8_t* msg, unsigned int msglen) {
+  Serial.println("Connected to NETPIE...");
+  microgear.setName("piesensor");
+}
+
 void setup() {
   Serial.begin(115200);
 
   dht.begin();
+  microgear.on(CONNECTED,onConnected);
 
   Serial.println("Starting...");
 
@@ -51,7 +57,6 @@ void setup() {
     microgear.resetToken();
     microgear.init(GEARKEY, GEARSECRET, SCOPE);
     microgear.connect(APPID);
-    microgear.setName("piesensor");
   }
 }
 
@@ -92,7 +97,6 @@ void loop() {
     }else{
       Serial.println("connection lost, reconnect...");
       microgear.connect(APPID);
-      microgear.setName("piesensor");
       delay(timer);
       timer+=100;
     }
