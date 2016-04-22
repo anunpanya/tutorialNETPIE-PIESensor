@@ -1,0 +1,140 @@
+<script src="https://netpie.io/microgear.js"></script>
+<script src="js/raphael-2.1.4.min.js"></script>
+<script src="js/justgage.js"></script>
+
+<style>
+	body {
+		text-align: center;
+	}
+
+	#temp, #humid, #light {
+		width:400px; height:320px;
+		display: inline-block;
+	}
+
+	#name {
+		font-size: 20px;
+		color: blue;
+	}
+
+	#esp8266 {
+		display: none;
+	}
+	
+	#nectec {
+		padding: 10px;
+		width:254px; 
+		height:60px;
+	}
+
+</style>
+
+<script>
+	var temp,humid,light;
+
+	window.onload = function(){
+		temp = new JustGage({
+			id: "temp", 
+			value: 0, 
+			min: 0,
+			max: 100,
+			title: "TEMPERATURE",
+			label: "Degree Celsius",
+			showMinMax: false 
+		});
+
+		humid = new JustGage({
+			id: "humid", 
+			value: 0, 
+			min: 0,
+			max: 100,
+			title: "HUMIDITY",
+			label: "%"
+		});
+
+		light = new JustGage({
+			id: "light", 
+			value: 0, 
+			min: 0,
+			max: 10,
+			title: "LIGHT LEVEL",
+			label: "",
+			levelColors: ["#00fff6","#ff00fc","#1200ff"]
+		});
+
+	};
+
+</script>
+
+<script>
+
+    var a = location.hash.substring(1).split(':');
+    if (a.length==3) {
+        appid = a[0];
+        appkey = a[1];
+        appsecret = a[2];
+    }
+    else {
+        alert("Please parse appid, appkey and appsecret as a hash e.g. :\n\n"+location+"#APPID:APPKEY:APPSECRET");            
+    }
+
+	var microgear = Microgear.create({
+        key: appkey,
+        secret: appsecret,
+        alias : "piesensorconsole"
+	});
+
+	var timestamp=0,stateSlampher='0';
+
+	microgear.on('message',function(topic,msg) {
+		var split_msg = msg.split(",");
+		var timestamp_current = new Date().getTime();
+		//console.log(msg);
+
+		if(typeof(split_msg[3])=='undefined' || split_msg[3] == 'esp8266'){
+				document.getElementById("esp8266").style.display = "block";
+				document.getElementById("name").innerHTML = split_msg[3].toUpperCase();
+				temp.refresh(split_msg[0]);
+				humid.refresh(split_msg[1]);
+				light.refresh(split_msg[2]);
+				timestamp = timestamp_current;
+				if(split_msg[2]<=1 && stateSlampher=='0'){
+					stateSlampher = '1';
+					microgear.chat("pieslampher",stateSlampher);
+				}else if(split_msg[2]>1 && stateSlampher=='1'){
+					stateSlampher = '0';
+					microgear.chat("pieslampher",stateSlampher);
+				}
+		}
+	});
+
+	microgear.on('connected', function() {
+		microgear.subscribe("/piesensor");
+		document.getElementById("data").innerHTML = "<FONT color=#00BB00>ONLINE</FONT>";
+		document.getElementById("logo").innerHTML = '<p><img src="img/nectec_logo.png" id="nectec" onclick="location.reload()"></p>';
+	});
+
+	microgear.on('disconnected', function() {
+		document.getElementById("data").innerHTML = "<FONT color=#00BB00>ONLINE</FONT>";
+		document.getElementById("logo").innerHTML = '<p><img src="img/nectec_logo.png" id="nectec" onclick="location.reload()"></p>';
+	});
+
+	setInterval(function(){
+		var timestamp_current = new Date().getTime();
+
+		if((timestamp_current-timestamp)>10000){
+			document.getElementById("esp8266").style.display = "none";
+		}
+	},1000);
+
+	microgear.connect(appid);
+</script>
+
+<div id="data" align=right><FONT COLOR=#DDDDDD>OFFLINE</FONT></div>
+<div id="logo"></div>
+<div id="esp8266">
+	<div id="name"></div>
+	<div id="temp"></div>
+	<div id="humid"></div>
+	<div id="light"></div>
+</div>
